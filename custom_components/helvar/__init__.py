@@ -13,7 +13,7 @@ from . import aiohelvar_patches
 from .const import CONF_HOST, CONF_PORT, DEFAULT_PORT, DOMAIN
 from .router import HelvarRouter
 
-PLATFORMS = ["light", "select", "sensor", "binary_sensor"]
+PLATFORMS = ["light", "cover", "switch", "select", "sensor", "binary_sensor"]
 
 CONFIG_SCHEMA = vol.Schema(
     {

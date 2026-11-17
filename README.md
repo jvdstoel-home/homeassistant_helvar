@@ -20,6 +20,11 @@ Changes in 0.3.1:
 - Logbook: every scene recall the router reports (`helvar_scene_recalled`) and device faults from a
   5-minute state poll (`helvar_device_state`) are fired as events and shown in the logbook.
 
+Changes in 0.3.2:
+- 490 Blinds Controller channels are covers (open = level 100, close = level 1, stop = level 0;
+  this mapping is an assumption still to be confirmed on site).
+- DALI devices of unknown type 0xFF (virtual status, e.g. "V: Status Weerstation") are switches.
+
 Note: the 910 router drops the integration's TCP session when a second TCP connection from the
 same host is opened, and does not answer queries over UDP. Do not poll the router from another
 connection on the same host.

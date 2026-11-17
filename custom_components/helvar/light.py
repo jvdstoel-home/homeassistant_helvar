@@ -33,8 +33,12 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     #     for group in router.api.groups.groups.values()
     # )
 
+    from .device_kinds import is_light
+
     devices = [
-        HelvarLight(device, router) for device in router.api.devices.get_light_devices()
+        HelvarLight(device, router)
+        for device in router.api.devices.devices.values()
+        if is_light(device)
     ]
 
     _LOGGER.info("Adding %s helvar devices", len(devices))
