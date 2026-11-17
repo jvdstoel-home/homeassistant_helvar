@@ -59,6 +59,9 @@ class HelvarLight(LightEntity):
 
             _LOGGER.debug("Received status update for %s", device)
 
+            # PATCH: ignore updates before the entity is added to HA.
+            if self.hass is None:
+                return
             self.async_write_ha_state()
 
         self.router.api.devices.register_subscription(
@@ -96,9 +99,7 @@ class HelvarLight(LightEntity):
     def is_on(self):
         """Return true if light is on."""
 
-        if self.brightness > 0:
-            return True
-        return False
+        return (self.brightness or 0) > 0
 
     @property
     def supported_color_modes(self):

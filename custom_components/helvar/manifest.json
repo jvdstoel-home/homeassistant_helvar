@@ -1,16 +1,23 @@
 {
   "domain": "helvar",
   "name": "Helvar",
-  "codeowners": ["@tomplayford"],
+  "codeowners": [
+    "@tomplayford",
+    "@jvdstoel-home"
+  ],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "https://github.com/tomplayford/homeassistant_helvar",
-  "issue_tracker": "https://github.com/tomplayford/homeassistant_helvar/issues",
+  "documentation": "https://github.com/jvdstoel-home/homeassistant_helvar",
+  "issue_tracker": "https://github.com/jvdstoel-home/homeassistant_helvar/issues",
   "homekit": {},
   "iot_class": "local_push",
-  "loggers": ["aiohelvar"],
-  "requirements": ["aiohelvar==0.9.8"],
+  "loggers": [
+    "aiohelvar"
+  ],
+  "requirements": [
+    "aiohelvar==0.9.8"
+  ],
   "ssdp": [],
-  "version": "0.2.3", 
+  "version": "0.3.0",
   "zeroconf": []
 }

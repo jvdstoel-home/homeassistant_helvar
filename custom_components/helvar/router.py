@@ -5,7 +5,7 @@ import aiohelvar
 
 from homeassistant.exceptions import ConfigEntryNotReady
 
-from .const import CONF_HOST, CONF_PORT
+from .const import CONF_EXTRA_ROUTERS, CONF_HOST, CONF_PORT
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -36,7 +36,10 @@ class HelvarRouter:
         port = self.port
         hass = self.hass
 
-        router = aiohelvar.Router(host, port)
+        extra = self.config_entry.options.get(
+            CONF_EXTRA_ROUTERS, self.config_entry.data.get(CONF_EXTRA_ROUTERS, [])
+        )
+        router = aiohelvar.Router(host, port, extra_router_ids=extra)
 
         try:
             await router.connect()
@@ -51,13 +54,20 @@ class HelvarRouter:
             return False
 
         self.api = router
-        # self.sensor_manager = SensorManager(self)
-
-        hass.async_create_task(
-            hass.config_entries.async_forward_entry_setups(self.config_entry, ["light"]),
+        _LOGGER.info(
+            "Helvar router %s ready: routers %s, %s groups, %s devices, %s scenes",
+            host,
+            router.router_ids,
+            len(router.groups.groups),
+            len(router.devices.devices),
+            len(router.scenes.scenes),
         )
-        hass.async_create_task(
-            hass.config_entries.async_forward_entry_setups(self.config_entry, ["select"]),
-        )
-
         return True
+
+    async def async_close(self):
+        """PATCH: close the connection on unload."""
+        if self.api is not None and self.api.connected:
+            try:
+                await self.api.disconnect()
+            except Exception:  # pylint: disable=broad-except
+                _LOGGER.debug("Error while disconnecting", exc_info=True)

@@ -35,52 +35,60 @@ class HelvarGroup(SelectEntity):
     def __init__(self, group: aiohelvar.groups.Group, router):
         """Initialize an HelvarLight."""
         self.router = router
-        self.group = group
+        self._helvar_group = group
         self._attr_current_option = None
         self.register_subscription()
 
     @property
     def current_option(self):
         """Get current selected option."""
-        current_scene_address = self.group.get_last_scene_address()
+        current_scene_address = self._helvar_group.get_last_scene_address()
+        if current_scene_address is None:  # PATCH: no scene recalled yet
+            return None
         current_scene = self.router.api.scenes.get_scene(current_scene_address)
-
         return _render_scene_name(current_scene)
 
     @property
     def unique_id(self):
         """Get unique id."""
-        return f"{self.group.group_id}-select"
+        return f"{self._helvar_group.group_id}-select"
 
     @property
     def options(self):
         """Get the options."""
         scenes = self.router.api.groups.get_scenes_for_group(
-            self.group.group_id, only_named=False
+            self._helvar_group.group_id, only_named=False
         )
-
-        return [_render_scene_name(scene) for scene in scenes]
+        options = [_render_scene_name(scene) for scene in scenes]
+        # PATCH: HA requires the current option to be one of the options.
+        current = self.current_option
+        if current is not None and current not in options:
+            options.append(current)
+        return options
 
     def register_subscription(self):
         """Register subscription."""
 
         async def async_router_callback_group(group_id):
-            _LOGGER.info("Group %s update callback has been received", group_id)
+            _LOGGER.debug("Group %s update callback has been received", group_id)
+            # PATCH: ignore updates before the entity is added to HA.
+            if self.hass is None:
+                return
             self.async_write_ha_state()
 
         result = self.router.api.groups.register_subscription(
-            self.group.group_id, async_router_callback_group
+            self._helvar_group.group_id, async_router_callback_group
         )
 
         if result is not True:
             _LOGGER.error(
-                "Could not register for a callback for group %s", self.group.group_id
+                "Could not register for a callback for group %s", self._helvar_group.group_id
             )
 
     @property
     def name(self):
         """Return the display name of this group."""
-        return f"Group: {self.group.name}"
+        return f"Group: {self._helvar_group.name}"
 
     async def async_select_option(self, option: str) -> None:
         """Change the selected option."""

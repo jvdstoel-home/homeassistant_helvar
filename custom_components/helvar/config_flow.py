@@ -31,8 +31,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
 
-    CONNECTION_CLASS = config_entries.CONN_CLASS_LOCAL_PUSH
-
     def __init__(self):
         """Initialize the Helvar flow."""
         self.router: aiohelvar.Router | None = None
@@ -52,7 +50,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             raise CannotConnect() from initial_exception
 
         workgroup_name = router.workgroup_name
-        self.router = router
+        # PATCH: close the test connection again.
+        try:
+            await router.disconnect()
+        except Exception:  # pylint: disable=broad-except
+            pass
         # Return info that you want to store in the config entry.
         return {"title": workgroup_name}
 
@@ -82,7 +84,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
             )
 
-        _LOGGER.exception("Creating Helvar config entry")
+        _LOGGER.info("Creating Helvar config entry")
         return self.async_create_entry(title=info["title"], data=user_input)
 
 

@@ -9,10 +9,11 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
 
+from . import aiohelvar_patches
 from .const import CONF_HOST, CONF_PORT, DEFAULT_PORT, DOMAIN
 from .router import HelvarRouter
 
-PLATFORMS = ["light", "select"]
+PLATFORMS = ["light", "select", "sensor", "binary_sensor"]
 
 CONFIG_SCHEMA = vol.Schema(
     {
@@ -30,40 +31,37 @@ CONFIG_SCHEMA = vol.Schema(
 async def async_setup(hass, config):
     """Set up the Helvar platform."""
 
-    hass.data[DOMAIN] = {}
+    hass.data.setdefault(DOMAIN, {})
+    aiohelvar_patches.apply()
     return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up HelvarNet from a config entry."""
 
+    aiohelvar_patches.apply()
+    hass.data.setdefault(DOMAIN, {})
+
     router = HelvarRouter(hass, entry)
 
     hass.data[DOMAIN][entry.entry_id] = router
 
     if not await router.async_setup():
-        hass.data[DOMAIN][entry.entry_id] = None
+        hass.data[DOMAIN].pop(entry.entry_id, None)
         return False
 
-    # for platform in PLATFORMS:
-    #     hass.async_create_task(
-    #         hass.config_entries.async_forward_entry_setup(entry, platform)
-    #     )
+    # PATCH: forward platforms here and await them (required by current HA).
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = all(
-        await asyncio.gather(
-            *[
-                hass.config_entries.async_forward_entry_unload(entry, platform)
-                for platform in PLATFORMS
-            ]
-        )
-    )
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
+        router = hass.data[DOMAIN].pop(entry.entry_id, None)
+        if router is not None:
+            await router.async_close()
 
     return unload_ok
