@@ -16,6 +16,10 @@ Changes in 0.3.0:
 - Analogue inputs of 942 units (C:151 Query Inputs) as sensors over the main TCP session.
   The input wiring is specific to one installation and lives in `helvar_inputs.py`.
 
+Changes in 0.3.1:
+- Logbook: every scene recall the router reports (`helvar_scene_recalled`) and device faults from a
+  5-minute state poll (`helvar_device_state`) are fired as events and shown in the logbook.
+
 Note: the 910 router drops the integration's TCP session when a second TCP connection from the
 same host is opened, and does not answer queries over UDP. Do not poll the router from another
 connection on the same host.

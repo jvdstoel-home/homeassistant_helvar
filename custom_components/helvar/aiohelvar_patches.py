@@ -338,6 +338,19 @@ def _get_scene(self, scene_address):
 
 
 # --------------------------------------------------------------------- router
+async def _handle_scene_recall(self, command):
+    """aiohelvar's scene recall handling, plus notification of listeners (logbook)."""
+    await _orig_handle_scene_recall(self, command)
+    scene_address = command.get_scene_address()
+    fade_time = command.get_param_value(CommandParameterType.FADE_TIME)
+    for listener in list(getattr(self, "_scene_listeners", [])):
+        try:
+            listener(scene_address, fade_time)
+        except Exception:  # noqa: BLE001
+            _LOGGER.exception("Scene listener failed")
+
+
+_orig_handle_scene_recall = _router.Router.handle_scene_recall
 _orig_router_init = _router.Router.__init__
 _orig_connect = _router.Router.connect
 _orig_send_command_task = _router.Router._send_command_task
@@ -549,6 +562,7 @@ def apply():
     _router.Router._stream_reader = _stream_reader
     _router.Router._stream_writer = _stream_writer
     _router.Router.reconnect = _reconnect
+    _router.Router.handle_scene_recall = _handle_scene_recall
     _router.Router._send_command_task = _send_command_task
     _router.Router._discover_router_ids = _discover_router_ids
     _router.Router.initialize = _initialize

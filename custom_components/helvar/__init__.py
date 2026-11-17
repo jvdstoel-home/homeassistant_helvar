@@ -53,6 +53,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # PATCH: forward platforms here and await them (required by current HA).
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
+    # Scene recalls and device faults as events for the logbook.
+    from .helvar_events import async_setup_events
+
+    entry.async_on_unload(await async_setup_events(hass, entry, router))
+
     return True
 
 
