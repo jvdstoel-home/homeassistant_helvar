@@ -50,3 +50,11 @@ screens:
             - open
             - close
             - stop
+
+send_raw:
+  fields:
+    command:
+      required: true
+      example: ">V:2,C:14,L:1,F:0,@1.7.1.34#"
+      selector:
+        text:

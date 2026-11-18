@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 
 import voluptuous as vol
 
@@ -24,6 +25,10 @@ RECALL_SCENE_SCHEMA = vol.Schema(
     }
 )
 
+
+SEND_RAW_SCHEMA = vol.Schema(
+    {vol.Required("command"): vol.All(cv.string, vol.Match(r"^>V:\d+,C:\d+[^#]*#?$"))}
+)
 
 SERVICE_SCREENS = "screens"
 SCREENS_SCHEMA = vol.Schema(
@@ -77,6 +82,22 @@ def _async_register_services(hass: HomeAssistant) -> None:
     hass.services.async_register(
         DOMAIN, SERVICE_SCREENS, _screens, schema=SCREENS_SCHEMA
     )
+
+    async def _send_raw(call: ServiceCall) -> None:
+        routers = list(hass.data.get(DOMAIN, {}).values())
+        if not routers:
+            raise HomeAssistantError("Helvar router is not loaded")
+        command = call.data["command"].strip()
+        if not command.endswith("#"):
+            command += "#"
+        _LOGGER.info("Sending raw HelvarNet command %s", command)
+        await routers[0].api.send_string(command)
+
+    hass.services.async_register(
+        DOMAIN, "send_raw", _send_raw, schema=SEND_RAW_SCHEMA
+    )
+
+_LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = ["light", "cover", "switch", "select", "sensor", "binary_sensor"]
 

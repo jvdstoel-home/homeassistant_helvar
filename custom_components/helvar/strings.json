@@ -55,6 +55,16 @@
           "description": "open, close or stop."
         }
       }
+    },
+    "send_raw": {
+      "name": "Send raw command",
+      "description": "Send one HelvarNet command over the integration's connection (testing).",
+      "fields": {
+        "command": {
+          "name": "Command",
+          "description": "e.g. >V:2,C:14,L:1,F:0,@1.7.1.34#"
+        }
+      }
     }
   }
 }
