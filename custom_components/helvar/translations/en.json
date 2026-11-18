@@ -1,22 +1,46 @@
 {
-    "config": {
-        "abort": {
-            "already_configured": "Device is already configured"
-        },
-        "error": {
-            "cannot_connect": "Failed to connect",
-            "invalid_auth": "Invalid authentication",
-            "unknown": "Unexpected error"
-        },
-        "step": {
-            "user": {
-                "data": {
-                    "host": "Host",
-                    "password": "Password",
-                    "username": "Username"
-                }
-            }
-        }
+  "config": {
+    "abort": {
+      "already_configured": "Device is already configured"
     },
-    "title": "HelvarNet"
+    "error": {
+      "cannot_connect": "Failed to connect",
+      "invalid_auth": "Invalid authentication",
+      "unknown": "Unexpected error"
+    },
+    "step": {
+      "user": {
+        "data": {
+          "host": "Host",
+          "password": "Password",
+          "username": "Username"
+        }
+      }
+    }
+  },
+  "title": "HelvarNet",
+  "services": {
+    "recall_scene": {
+      "name": "Recall scene",
+      "description": "Recall a scene of a Helvar group, also scenes without a name (e.g. what a button panel does).",
+      "fields": {
+        "group": {
+          "name": "Group",
+          "description": "Helvar group number, e.g. 4 for 4 Woonkamer alles."
+        },
+        "block": {
+          "name": "Block",
+          "description": "Scene block (1-8). Button panels normally use block 1."
+        },
+        "scene": {
+          "name": "Scene",
+          "description": "Scene number in the block (1-16). 15 is usually 'off'."
+        },
+        "fade_time": {
+          "name": "Fade time",
+          "description": "Fade time in seconds. Omit to use the default."
+        }
+      }
+    }
+  }
 }

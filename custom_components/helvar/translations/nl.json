@@ -1,0 +1,27 @@
+{
+  "title": "HelvarNet",
+  "services": {
+    "recall_scene": {
+      "name": "Scène oproepen",
+      "description": "Roep een scène van een Helvar-groep op, ook scènes zonder naam (zoals een knoppenpaneel doet).",
+      "fields": {
+        "group": {
+          "name": "Groep",
+          "description": "Helvar-groepnummer, bijv. 4 voor 4 Woonkamer alles."
+        },
+        "block": {
+          "name": "Blok",
+          "description": "Scèneblok (1-8). Knoppenpanelen gebruiken meestal blok 1."
+        },
+        "scene": {
+          "name": "Scène",
+          "description": "Scènenummer in het blok (1-16). 15 is meestal 'uit'."
+        },
+        "fade_time": {
+          "name": "Faadtijd",
+          "description": "Faadtijd in seconden. Leeg = standaard."
+        }
+      }
+    }
+  }
+}

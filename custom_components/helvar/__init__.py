@@ -6,12 +6,48 @@ import asyncio
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 
 from . import aiohelvar_patches
 from .const import CONF_HOST, CONF_PORT, DEFAULT_PORT, DOMAIN
 from .router import HelvarRouter
+
+SERVICE_RECALL_SCENE = "recall_scene"
+RECALL_SCENE_SCHEMA = vol.Schema(
+    {
+        vol.Required("group"): vol.All(vol.Coerce(int), vol.Range(min=1, max=16383)),
+        vol.Optional("block", default=1): vol.All(vol.Coerce(int), vol.Range(min=1, max=8)),
+        vol.Required("scene"): vol.All(vol.Coerce(int), vol.Range(min=1, max=16)),
+        vol.Optional("fade_time"): vol.All(vol.Coerce(float), vol.Range(min=0, max=600)),
+    }
+)
+
+
+def _async_register_services(hass: HomeAssistant) -> None:
+    """helvar.recall_scene: recall any scene of a group, also scenes without a name."""
+    if hass.services.has_service(DOMAIN, SERVICE_RECALL_SCENE):
+        return
+
+    async def _recall_scene(call: ServiceCall) -> None:
+        routers = list(hass.data.get(DOMAIN, {}).values())
+        if not routers:
+            raise HomeAssistantError("Helvar router is not loaded")
+        import aiohelvar
+
+        address = aiohelvar.SceneAddress(
+            call.data["group"], call.data["block"], call.data["scene"]
+        )
+        kwargs = {}
+        if "fade_time" in call.data:
+            # HelvarNet fade time is in 1/100 s.
+            kwargs["fade_time"] = int(round(call.data["fade_time"] * 100))
+        await routers[0].api.groups.set_scene(address, **kwargs)
+
+    hass.services.async_register(
+        DOMAIN, SERVICE_RECALL_SCENE, _recall_scene, schema=RECALL_SCENE_SCHEMA
+    )
 
 PLATFORMS = ["light", "cover", "switch", "select", "sensor", "binary_sensor"]
 
@@ -33,6 +69,7 @@ async def async_setup(hass, config):
 
     hass.data.setdefault(DOMAIN, {})
     aiohelvar_patches.apply()
+    _async_register_services(hass)
     return True
 
 

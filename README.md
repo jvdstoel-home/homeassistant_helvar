@@ -25,6 +25,10 @@ Changes in 0.3.2:
   this mapping is an assumption still to be confirmed on site).
 - DALI devices of unknown type 0xFF (virtual status, e.g. "V: Status Weerstation") are switches.
 
+Changes in 0.3.3:
+- New action `helvar.recall_scene` (group, block, scene, optional fade_time) to recall any scene
+  of a group, also scenes without a name, e.g. for dashboard buttons that mirror a button panel.
+
 Note: the 910 router drops the integration's TCP session when a second TCP connection from the
 same host is opened, and does not answer queries over UDP. Do not poll the router from another
 connection on the same host.
