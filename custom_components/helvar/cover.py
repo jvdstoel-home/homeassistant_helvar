@@ -110,6 +110,17 @@ class HelvarCover(CoverEntity):
     def is_opening(self) -> bool:
         return self._running() and self._last()[0] == UP
 
+    def _scene_levels(self) -> dict:
+        """Levels this channel has in its scene table (blocks 1-8), '*' (ignore) left out."""
+        levels = list(getattr(self.device, "levels", None) or [])
+        result = {}
+        for block in range(1, 9):
+            for scene in range(1, 17):
+                index = (block - 1) * 16 + scene - 1
+                if index < len(levels) and str(levels[index]) not in ("*", "", "None"):
+                    result[f"{block}.{scene}"] = levels[index]
+        return result
+
     @property
     def extra_state_attributes(self):
         last = self._last()
@@ -117,6 +128,8 @@ class HelvarCover(CoverEntity):
             "helvar_address": self._address,
             "helvar_name": self.device.name,
             "last_command": last[0] if last else None,
+            "scene_levels": self._scene_levels(),
+            "scene_levels_raw_count": len(getattr(self.device, "levels", None) or []),
         }
 
     async def async_open_cover(self, **kwargs) -> None:
