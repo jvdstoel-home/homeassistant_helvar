@@ -14,6 +14,7 @@ from homeassistant.components.cover import (
     CoverEntity,
     CoverEntityFeature,
 )
+from homeassistant.core import callback
 from homeassistant.helpers.event import async_call_later
 
 from .blinds import DOWN, RUN_TIME, STOPPED, UP, get_blind_state
@@ -66,6 +67,7 @@ class HelvarCover(CoverEntity):
         if self._unsub_timer:
             self._unsub_timer()
 
+    @callback
     def _on_change(self) -> None:
         if self.hass is None:
             return
@@ -75,6 +77,7 @@ class HelvarCover(CoverEntity):
             self._unsub_timer()
         self._unsub_timer = async_call_later(self.hass, RUN_TIME + 1, self._timer_done)
 
+    @callback
     def _timer_done(self, _now) -> None:
         self._unsub_timer = None
         if self.hass is not None:
