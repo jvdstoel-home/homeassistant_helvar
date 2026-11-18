@@ -111,3 +111,12 @@ Changes in 0.4.0:
   state); panel presses reported by the router update it too.
 - Logbook: the level reported with C:13 is no longer shown (it does not match the lamps).
 
+Changes in 0.5.0:
+- Screens up/down now go through scenes, like the weather sequences: every 490 channel has
+  the standard scene table (1.1 = 100 = up, 1.15 = 0 = down). Covers use C:12 (recall scene
+  on one device), `helvar.screens` uses C:11 on a blinds group. Proportion commands from the
+  router did not move a screen on site; they are only kept for stop (still to be tested).
+- Scene recalls on groups with screens (weather sequences, HA) update the cover state.
+- Covers show their scene table (`scene_levels`). Test action `helvar.send_raw`.
+- Note: Helvar blocks scenes for the ground-floor screens while it rains.
+

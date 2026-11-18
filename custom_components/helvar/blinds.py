@@ -1,4 +1,13 @@
-"""Screens (490 Blinds Controller channels), driven the way the button panels do it.
+"""Screens (490 Blinds Controller channels).
+
+Up/down go through scenes, like the weather sequences in the Designer project:
+every 490 channel has the standard scene table (1.1 = 100 = up, 1.15/1.16 = 0 = down).
+Proportion commands sent by the router (C:17/C:18) did not move a screen on site
+(18 Nov), while button panels use them directly on the bus; they are only kept for
+stop (opposite direction while running, as on the panels), which is still to be tested.
+Note: Helvar blocks scenes for the ground-floor screens while it rains.
+
+Panel behaviour (for tracking):
 
 Observed on site (18 Nov 2026): every panel sends "modify proportion" to the
 room's blinds group, C:17 with F:15:
@@ -21,6 +30,7 @@ UP = "up"
 DOWN = "down"
 STOPPED = "stopped"
 PROPORTION = {DOWN: 0, UP: -1}
+SCENE = {UP: 1, DOWN: 15}  # block 1
 FADE = 15  # 1/100 s, as the panels send it
 # The 490's run time lies between 43 s and 98 s (measured on 18 Nov: "up" 43 s after
 # "down" acted as stop, 98 s after it moved). Within RUN_TIME the opposite direction
@@ -94,18 +104,15 @@ class BlindState:
 
     # ---------------------------------------------------------------- sending
     async def move_group(self, group_id: int, direction: str) -> None:
-        self._remember(f"C:17,G:{int(group_id)},P:{PROPORTION[direction]}")
         await self.api.send_string(
-            f">V:2,C:17,G:{int(group_id)},P:{PROPORTION[direction]},F:{FADE}#"
+            f">V:2,C:11,G:{int(group_id)},B:1,S:{SCENE[direction]},F:0#"
         )
         self.record_group(int(group_id), direction)
 
     async def move_device(self, address: str, direction: str) -> None:
         addr = str(address).lstrip("@")
-        self._remember(f"C:18,P:{PROPORTION[direction]},@{addr}")
-        await self.api.send_string(
-            f">V:2,C:18,P:{PROPORTION[direction]},F:{FADE},@{addr}#"
-        )
+        # C:12 = recall scene on one device.
+        await self.api.send_string(f">V:2,C:12,B:1,S:{SCENE[direction]},F:0,@{addr}#")
         self.record_device(f"@{addr}", direction)
 
     async def stop_group(self, group_id: int) -> None:
@@ -179,6 +186,37 @@ class BlindState:
                 self.record_device(key, direction)
 
 
+    def on_scene(self, scene_address, _fade_time) -> None:
+        """A scene recall on a group with screens: level 100 = up, 0 = down."""
+        group = self.api.groups.groups.get(scene_address.group)
+        if group is None:
+            return
+        now = time.monotonic()
+        changed = False
+        for address in getattr(group, "devices", []):
+            device = self.api.devices.devices.get(address)
+            if device is None or not _is_blind(device):
+                continue
+            level = device.get_level_for_scene(scene_address) if hasattr(
+                device, "get_level_for_scene"
+            ) else None
+            try:
+                level = float(level)
+            except (TypeError, ValueError):
+                continue  # '*' = this channel ignores the scene
+            direction = UP if level >= 100 else DOWN if level <= 0 else STOPPED
+            self.devices[str(address)] = (direction, now)
+            changed = True
+        if changed:
+            self._notify()
+
+
+def _is_blind(device) -> bool:
+    from .device_kinds import is_blind
+
+    return is_blind(device)
+
+
 def get_blind_state(api) -> BlindState:
     state = getattr(api, "_blind_state", None)
     if state is None:
@@ -187,4 +225,8 @@ def get_blind_state(api) -> BlindState:
         if listeners is None:
             listeners = api._control_listeners = []
         listeners.append(state.on_control)
+        scene_listeners = getattr(api, "_scene_listeners", None)
+        if scene_listeners is None:
+            scene_listeners = api._scene_listeners = []
+        scene_listeners.append(state.on_scene)
     return state
