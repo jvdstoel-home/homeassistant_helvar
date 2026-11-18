@@ -101,3 +101,13 @@ Changes in 0.3.4:
   proportion, device scene) are logged, shown in the logbook (`helvar_control`) and make the
   integration re-read the levels of the affected lamps. Before, they were silently dropped,
   so e.g. a single on/off button that sets a direct level left Home Assistant out of date.
+
+Changes in 0.4.0:
+- Screens (490 Blinds Controller) are driven the way the button panels do it: "modify
+  proportion" with P:-1 = up, P:0 = down, F:15; stop = the opposite direction while the
+  490 still counts its run time. Covers use C:18 per channel, the new action
+  `helvar.screens` (group, open/close/stop) uses C:17 on a blinds group.
+- The position cannot be read, so covers show the last commanded direction (assumed
+  state); panel presses reported by the router update it too.
+- Logbook: the level reported with C:13 is no longer shown (it does not match the lamps).
+

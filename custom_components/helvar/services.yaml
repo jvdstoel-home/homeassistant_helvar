@@ -31,3 +31,22 @@ recall_scene:
           step: 0.1
           unit_of_measurement: s
           mode: box
+
+screens:
+  fields:
+    group:
+      required: true
+      example: 500
+      selector:
+        number:
+          min: 1
+          max: 16383
+          mode: box
+    action:
+      required: true
+      selector:
+        select:
+          options:
+            - open
+            - close
+            - stop

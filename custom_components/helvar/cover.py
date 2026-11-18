@@ -1,23 +1,31 @@
-"""Helvar 490 Blinds Controller channels as covers (screens)."""
+"""Helvar 490 Blinds Controller channels as covers (screens).
+
+Commands follow the button panels (see blinds.py): C:18 per channel with
+P:-1 = up, P:0 = down, stop = the opposite direction while still running.
+The position cannot be read, so the state is the last commanded direction.
+"""
 from __future__ import annotations
 
 import logging
+import time
 
 from homeassistant.components.cover import (
     CoverDeviceClass,
     CoverEntity,
     CoverEntityFeature,
 )
+from homeassistant.helpers.event import async_call_later
 
+from .blinds import DOWN, RUN_TIME, STOPPED, UP, get_blind_state
 from .const import DOMAIN
-from .device_kinds import (
-    BLIND_CLOSE_LEVEL,
-    BLIND_OPEN_LEVEL,
-    BLIND_STOP_LEVEL,
-    is_blind,
-)
+from .device_kinds import is_blind
 
 _LOGGER = logging.getLogger(__name__)
+
+# Display names where the Designer name is misleading.
+NAME_OVERRIDES = {
+    "@1.7.1.36": "Screen zuid ouders/badkamer",
+}
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
@@ -39,53 +47,83 @@ class HelvarCover(CoverEntity):
     _attr_supported_features = (
         CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE | CoverEntityFeature.STOP
     )
+    _attr_assumed_state = True
 
     def __init__(self, device, router) -> None:
         self.router = router
         self.device = device
+        self._address = str(device.address)
         self._attr_unique_id = f"{device.address}-cover"
+        self._blinds = get_blind_state(router.api)
+        self._unsub_timer = None
 
-        async def _updated(_device):
-            if self.hass is not None:
-                self.async_write_ha_state()
+    async def async_added_to_hass(self) -> None:
+        self._blinds.listeners.append(self._on_change)
 
-        router.api.devices.register_subscription(device.address, _updated)
+    async def async_will_remove_from_hass(self) -> None:
+        if self._on_change in self._blinds.listeners:
+            self._blinds.listeners.remove(self._on_change)
+        if self._unsub_timer:
+            self._unsub_timer()
+
+    def _on_change(self) -> None:
+        if self.hass is None:
+            return
+        self.async_write_ha_state()
+        # Re-render when the run time is over (opening/closing -> open/closed).
+        if self._unsub_timer:
+            self._unsub_timer()
+        self._unsub_timer = async_call_later(self.hass, RUN_TIME + 1, self._timer_done)
+
+    def _timer_done(self, _now) -> None:
+        self._unsub_timer = None
+        if self.hass is not None:
+            self.async_write_ha_state()
 
     @property
     def name(self):
-        return self.device.name
+        return NAME_OVERRIDES.get(self._address, self.device.name)
 
     @property
     def available(self) -> bool:
         return bool(getattr(self.router.api, "connected", True))
 
+    def _last(self):
+        return self._blinds.device_state(self._address)
+
+    def _running(self) -> bool:
+        last = self._last()
+        return bool(last) and last[0] != STOPPED and time.monotonic() - last[1] < RUN_TIME
+
     @property
     def is_closed(self):
-        """Last known command: max = open, min = closed, off = stopped (unknown)."""
-        level = self.device.load_level
-        if level is None:
+        last = self._last()
+        if not last or last[0] == STOPPED:
             return None
-        level = float(level)
-        if level >= BLIND_OPEN_LEVEL:
-            return False
-        if 0 < level <= BLIND_CLOSE_LEVEL:
-            return True
-        return None
+        return last[0] == DOWN
+
+    @property
+    def is_closing(self) -> bool:
+        return self._running() and self._last()[0] == DOWN
+
+    @property
+    def is_opening(self) -> bool:
+        return self._running() and self._last()[0] == UP
 
     @property
     def extra_state_attributes(self):
-        return {"helvar_address": str(self.device.address), "helvar_level": self.device.load_level}
-
-    async def _send(self, level: int) -> None:
-        await self.router.api.devices.set_device_load_level(
-            self.device.address, str(level), 0
-        )
+        last = self._last()
+        return {
+            "helvar_address": self._address,
+            "helvar_name": self.device.name,
+            "last_command": last[0] if last else None,
+        }
 
     async def async_open_cover(self, **kwargs) -> None:
-        await self._send(BLIND_OPEN_LEVEL)
+        await self._blinds.move_device(self._address, UP)
 
     async def async_close_cover(self, **kwargs) -> None:
-        await self._send(BLIND_CLOSE_LEVEL)
+        await self._blinds.move_device(self._address, DOWN)
 
     async def async_stop_cover(self, **kwargs) -> None:
-        await self._send(BLIND_STOP_LEVEL)
+        await self._blinds.stop_device(self._address)

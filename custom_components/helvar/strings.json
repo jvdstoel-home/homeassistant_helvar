@@ -41,6 +41,20 @@
           "description": "Fade time in seconds. Omit to use the default."
         }
       }
+    },
+    "screens": {
+      "name": "Screens",
+      "description": "Move the screens of a blinds group the way the button panels do (C:17).",
+      "fields": {
+        "group": {
+          "name": "Group",
+          "description": "Blinds group, e.g. 400 woonkamer, 500 keuken."
+        },
+        "action": {
+          "name": "Action",
+          "description": "open, close or stop."
+        }
+      }
     }
   }
 }

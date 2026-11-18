@@ -25,6 +25,15 @@ RECALL_SCENE_SCHEMA = vol.Schema(
 )
 
 
+SERVICE_SCREENS = "screens"
+SCREENS_SCHEMA = vol.Schema(
+    {
+        vol.Required("group"): vol.All(vol.Coerce(int), vol.Range(min=1, max=16383)),
+        vol.Required("action"): vol.In(["open", "close", "stop"]),
+    }
+)
+
+
 def _async_register_services(hass: HomeAssistant) -> None:
     """helvar.recall_scene: recall any scene of a group, also scenes without a name."""
     if hass.services.has_service(DOMAIN, SERVICE_RECALL_SCENE):
@@ -47,6 +56,26 @@ def _async_register_services(hass: HomeAssistant) -> None:
 
     hass.services.async_register(
         DOMAIN, SERVICE_RECALL_SCENE, _recall_scene, schema=RECALL_SCENE_SCHEMA
+    )
+
+    async def _screens(call: ServiceCall) -> None:
+        routers = list(hass.data.get(DOMAIN, {}).values())
+        if not routers:
+            raise HomeAssistantError("Helvar router is not loaded")
+        from .blinds import DOWN, UP, get_blind_state
+
+        state = get_blind_state(routers[0].api)
+        group = call.data["group"]
+        action = call.data["action"]
+        if action == "open":
+            await state.move_group(group, UP)
+        elif action == "close":
+            await state.move_group(group, DOWN)
+        else:
+            await state.stop_group(group)
+
+    hass.services.async_register(
+        DOMAIN, SERVICE_SCREENS, _screens, schema=SCREENS_SCHEMA
     )
 
 PLATFORMS = ["light", "cover", "switch", "select", "sensor", "binary_sensor"]

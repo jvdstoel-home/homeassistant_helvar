@@ -22,6 +22,20 @@
           "description": "Faadtijd in seconden. Leeg = standaard."
         }
       }
+    },
+    "screens": {
+      "name": "Screens",
+      "description": "Beweeg de screens van een zonweringsgroep zoals de knoppenpanelen (C:17).",
+      "fields": {
+        "group": {
+          "name": "Groep",
+          "description": "Zonweringsgroep, bv. 400 woonkamer, 500 keuken."
+        },
+        "action": {
+          "name": "Actie",
+          "description": "open, close of stop."
+        }
+      }
     }
   }
 }

@@ -1,12 +1,7 @@
 """Decide which Home Assistant platform a Helvar load device belongs to."""
 from __future__ import annotations
 
-# Level commands for a 490 Blinds Controller channel (direct level, 0-100).
-# Assumption, to be confirmed on site: like other DALI blind modules,
-# max = up/open, min = down/close, off = stop.
-BLIND_OPEN_LEVEL = 100
-BLIND_CLOSE_LEVEL = 1
-BLIND_STOP_LEVEL = 0
+# Screens are driven like the button panels: see blinds.py.
 
 
 def is_blind(device) -> bool:
