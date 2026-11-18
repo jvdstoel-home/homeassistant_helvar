@@ -4,7 +4,7 @@ from __future__ import annotations
 from homeassistant.core import callback
 
 from .const import DOMAIN
-from .helvar_events import EVENT_DEVICE_STATE, EVENT_SCENE
+from .helvar_events import EVENT_CONTROL, EVENT_DEVICE_STATE, EVENT_SCENE
 
 
 @callback
@@ -28,5 +28,22 @@ def async_describe_events(hass, async_describe_event):
         message = "meldt: " + ", ".join(faults) if faults else "storing opgelost"
         return {"name": f"Helvar {name}", "message": message}
 
+    @callback
+    def describe_control(event):
+        data = event.data
+        if data.get("group_name") or data.get("group") is not None:
+            name = data.get("group_name") or f"groep {data.get('group')}"
+        else:
+            name = data.get("device_name") or data.get("address") or "router"
+        message = data.get("description") or f"commando {data.get('command')}"
+        if data.get("level") is not None:
+            message += f", niveau {data['level']} %"
+        elif data.get("proportion") is not None:
+            message += f", {data['proportion']} %"
+        elif data.get("scene") is not None:
+            message += f", scène {data.get('block')}.{data['scene']}"
+        return {"name": f"Helvar {name}", "message": message}
+
     async_describe_event(DOMAIN, EVENT_SCENE, describe_scene)
+    async_describe_event(DOMAIN, EVENT_CONTROL, describe_control)
     async_describe_event(DOMAIN, EVENT_DEVICE_STATE, describe_state)

@@ -19,6 +19,7 @@ _LOGGER = logging.getLogger(__name__)
 
 EVENT_SCENE = "helvar_scene_recalled"
 EVENT_DEVICE_STATE = "helvar_device_state"
+EVENT_CONTROL = "helvar_control"
 STATE_POLL_INTERVAL = timedelta(minutes=5)
 
 # HelvarNet device state flags (C:110), Dutch text for the logbook.
@@ -87,6 +88,43 @@ async def async_setup_events(hass: HomeAssistant, entry, helvar_router):
         listeners = api._scene_listeners = []
     listeners.append(on_scene_recall)
 
+    @callback
+    def on_control(cmd, description, params, address) -> None:
+        group_id = params.get("G")
+        group = None
+        if group_id is not None:
+            try:
+                group = api.groups.groups.get(int(group_id))
+            except ValueError:
+                group = None
+        device = None
+        if address:
+            device = next(
+                (d for a, d in api.devices.devices.items() if str(a) == f"@{address}"),
+                None,
+            )
+        hass.bus.async_fire(
+            EVENT_CONTROL,
+            {
+                "command": cmd,
+                "description": description,
+                "group": int(group_id) if group_id and group_id.isdigit() else None,
+                "group_name": getattr(group, "name", None),
+                "address": address,
+                "device_name": getattr(device, "name", None),
+                "level": params.get("L"),
+                "proportion": params.get("P"),
+                "scene": params.get("S"),
+                "block": params.get("B"),
+                "fade_time": params.get("F"),
+            },
+        )
+
+    control_listeners = getattr(api, "_control_listeners", None)
+    if control_listeners is None:
+        control_listeners = api._control_listeners = []
+    control_listeners.append(on_control)
+
     last_state: dict[str, int] = {}
 
     async def poll_states(_now=None) -> None:
@@ -131,5 +169,7 @@ async def async_setup_events(hass: HomeAssistant, entry, helvar_router):
         unsub_timer()
         if on_scene_recall in listeners:
             listeners.remove(on_scene_recall)
+        if on_control in control_listeners:
+            control_listeners.remove(on_control)
 
     return stop

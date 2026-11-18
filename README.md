@@ -96,6 +96,8 @@ The authors of this software provide no support, guarantees, or warranty for its
 
 This software is licensed under the Apache License 2.0. See the LICENCE file for more details. 
 
-
-
-
+Changes in 0.3.4:
+- Control commands the router reports other than scene recalls (C:12-C:18: direct level,
+  proportion, device scene) are logged, shown in the logbook (`helvar_control`) and make the
+  integration re-read the levels of the affected lamps. Before, they were silently dropped,
+  so e.g. a single on/off button that sets a direct level left Home Assistant out of date.

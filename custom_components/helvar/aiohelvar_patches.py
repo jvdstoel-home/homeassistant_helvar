@@ -383,6 +383,52 @@ def _handle_input_reply(router, raw: bytes) -> bool:
     return True
 
 
+# Control commands other than C:11 that the router reports when a button panel,
+# sequence or other client changes lamps. aiohelvar cannot parse most of them.
+CONTROL_COMMANDS = {
+    12: "scène oproepen (apparaat)",
+    13: "direct niveau (groep)",
+    14: "direct niveau (apparaat)",
+    15: "directe proportie (groep)",
+    16: "directe proportie (apparaat)",
+    17: "proportie wijzigen (groep)",
+    18: "proportie wijzigen (apparaat)",
+}
+_CONTROL = re.compile(r"^>V:\d+,C:(\d+)((?:,[A-Z]:[^,@#]*)*)(?:,?@([\d.]+))?#?$")
+
+
+def _handle_other_control(router, raw: bytes) -> bool:
+    """Log control commands other than scene recalls and re-read the affected levels."""
+    text = raw.decode(errors="replace").strip()
+    match = _CONTROL.match(text)
+    if not match:
+        return False
+    cmd = int(match.group(1))
+    if cmd not in CONTROL_COMMANDS:
+        return False
+    params = dict(
+        part.split(":", 1) for part in match.group(2).split(",") if ":" in part
+    )
+    address = match.group(3)
+    _LOGGER.info("Router reported %s: %s", CONTROL_COMMANDS[cmd], text)
+    fade = params.get("F", 0)
+    if "G" in params:
+        try:
+            _schedule_group_refresh(router, int(params["G"]), fade)
+        except ValueError:
+            pass
+    elif address:
+        for group_id, group in router.groups.groups.items():
+            if any(str(d) == f"@{address}" or str(d) == address for d in group.devices):
+                _schedule_group_refresh(router, group_id, fade)
+    for listener in list(getattr(router, "_control_listeners", [])):
+        try:
+            listener(cmd, CONTROL_COMMANDS[cmd], params, address)
+        except Exception:  # noqa: BLE001
+            _LOGGER.exception("Control listener failed")
+    return True
+
+
 async def query_input(router, address: str, timeout: float = 5.0):
     """Ask the router for the level (0-255) of an input over the main TCP session."""
     if not router.connected:
@@ -487,6 +533,8 @@ async def _stream_reader(self, reader):
                 continue
             try:
                 if _handle_input_reply(self, splitline):
+                    continue
+                if _handle_other_control(self, splitline):
                     continue
                 command = parser.parse_command(splitline)
             except _router.ParserError as err:
