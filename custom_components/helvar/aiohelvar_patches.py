@@ -387,7 +387,7 @@ def _handle_input_reply(router, raw: bytes) -> bool:
 # sequence or other client changes lamps. aiohelvar cannot parse most of them.
 CONTROL_COMMANDS = {
     12: "scène oproepen (apparaat)",
-    13: "direct niveau (groep)",
+    13: "knop / direct niveau (groep)",
     14: "direct niveau (apparaat)",
     15: "directe proportie (groep)",
     16: "directe proportie (apparaat)",

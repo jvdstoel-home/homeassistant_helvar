@@ -36,9 +36,9 @@ def async_describe_events(hass, async_describe_event):
         else:
             name = data.get("device_name") or data.get("address") or "router"
         message = data.get("description") or f"commando {data.get('command')}"
-        if data.get("level") is not None:
-            message += f", niveau {data['level']} %"
-        elif data.get("proportion") is not None:
+        # The level a button panel reports with C:13 is not the level the lamps go to
+        # (an "on" press reports L:0), so it is left out; the lamps show the real level.
+        if data.get("proportion") is not None:
             message += f", {data['proportion']} %"
         elif data.get("scene") is not None:
             message += f", scène {data.get('block')}.{data['scene']}"
