@@ -126,6 +126,14 @@ Changes in 0.6.0:
   and the platforms add their entities when it has finished. Until then the Helvar
   entities show as unavailable. If discovery fails, the integration reloads after 60 s.
 
+Changes in 0.6.2:
+
+- After a scene or command, the integration reads the real level of each lamp in
+  the group. When the router reports a lamp on while Home Assistant expected it
+  off (or the other way round), a `helvar_level_corrected` event is fired and
+  shown in the logbook, e.g. "router meldt aan (100 %) na scène 1.15 in 45
+  Woonk+keuken uit; HA verwachtte uit".
+
 Changes in 0.6.1:
 - Screens verified on site: scene 1.1 = down, scene 1.15 = up (on a blinds group or on one
   channel with C:12); stop = "modify proportion" in the opposite direction while moving

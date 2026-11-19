@@ -152,10 +152,15 @@ async def _handle_scene_callback(self, scene_address, fade_time):
         self.router.scenes.register_scene(scene_address, _scenes.Scene(scene_address))
     await _orig_handle_scene_callback(self, scene_address, fade_time)
     if scene_address is not None:
-        _schedule_group_refresh(self.router, scene_address.group, fade_time)
+        _schedule_group_refresh(
+            self.router,
+            scene_address.group,
+            fade_time,
+            f"scène {scene_address.block}.{scene_address.scene}",
+        )
 
 
-def _schedule_group_refresh(router, group_id, fade_time):
+def _schedule_group_refresh(router, group_id, fade_time, reason=None):
     """After a scene recall, read the real levels of the group's lamps once the fade is done.
 
     The levels computed from the scene table are only an estimate ('*' = unchanged,
@@ -173,11 +178,11 @@ def _schedule_group_refresh(router, group_id, fade_time):
     except (TypeError, ValueError):
         fade_s = 0
     tasks[group_id] = asyncio.create_task(
-        _refresh_group_levels(router, group_id, min(fade_s, 60) + 1.5)
+        _refresh_group_levels(router, group_id, min(fade_s, 60) + 1.5, reason)
     )
 
 
-async def _refresh_group_levels(router, group_id, delay):
+async def _refresh_group_levels(router, group_id, delay, reason=None):
     await asyncio.sleep(delay)
     group = router.groups.groups.get(group_id)
     if group is None:
@@ -196,9 +201,23 @@ async def _refresh_group_levels(router, group_id, delay):
         if response is None or response.command_message_type != MessageType.REPLY:
             continue
         try:
-            await router.devices.update_device_load_level(address, response.result)
+            new_level = float(response.result)
         except (TypeError, ValueError):
             continue
+        old_level = float(getattr(device, "load_level", 0) or 0)
+        await router.devices.update_device_load_level(address, response.result)
+        if (old_level > 0) != (new_level > 0):
+            # Home Assistant expected the lamp to be on/off after the scene, but the
+            # router reports otherwise: log it so it can be traced afterwards.
+            _LOGGER.info(
+                "Level of %s (%s) corrected after %s in group %s: expected %s, router reports %s",
+                address, device.name, reason or "command", group_id, old_level, new_level,
+            )
+            for listener in list(getattr(router, "_correction_listeners", [])):
+                try:
+                    listener(address, device.name, group_id, reason, old_level, new_level)
+                except Exception:  # noqa: BLE001
+                    _LOGGER.exception("Correction listener failed")
 
 
 # -------------------------------------------------------------------- devices
@@ -414,13 +433,13 @@ def _handle_other_control(router, raw: bytes) -> bool:
     fade = params.get("F", 0)
     if "G" in params:
         try:
-            _schedule_group_refresh(router, int(params["G"]), fade)
+            _schedule_group_refresh(router, int(params["G"]), fade, CONTROL_COMMANDS[cmd])
         except ValueError:
             pass
     elif address:
         for group_id, group in router.groups.groups.items():
             if any(str(d) == f"@{address}" or str(d) == address for d in group.devices):
-                _schedule_group_refresh(router, group_id, fade)
+                _schedule_group_refresh(router, group_id, fade, CONTROL_COMMANDS[cmd])
     for listener in list(getattr(router, "_control_listeners", [])):
         try:
             listener(cmd, CONTROL_COMMANDS[cmd], params, address)

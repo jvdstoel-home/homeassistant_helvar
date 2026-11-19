@@ -2,6 +2,8 @@
 
 - helvar_scene_recalled: every scene recall the router reports (wall switch,
   schedule, sequence or Home Assistant itself).
+- helvar_level_corrected: after a scene/command the router reports a lamp on
+  while Home Assistant expected it off, or the other way round.
 - helvar_device_state: a lamp/device reports a fault, or a fault is cleared.
   Device states are polled every 5 minutes over the main session.
 """
@@ -20,6 +22,7 @@ _LOGGER = logging.getLogger(__name__)
 EVENT_SCENE = "helvar_scene_recalled"
 EVENT_DEVICE_STATE = "helvar_device_state"
 EVENT_CONTROL = "helvar_control"
+EVENT_CORRECTION = "helvar_level_corrected"
 STATE_POLL_INTERVAL = timedelta(minutes=5)
 
 # HelvarNet device state flags (C:110), Dutch text for the logbook.
@@ -125,6 +128,27 @@ async def async_setup_events(hass: HomeAssistant, entry, helvar_router):
         control_listeners = api._control_listeners = []
     control_listeners.append(on_control)
 
+    @callback
+    def on_correction(address, name, group_id, reason, old_level, new_level) -> None:
+        group = api.groups.groups.get(group_id)
+        hass.bus.async_fire(
+            EVENT_CORRECTION,
+            {
+                "address": str(address),
+                "name": name,
+                "group": group_id,
+                "group_name": getattr(group, "name", None),
+                "reason": reason,
+                "expected_level": old_level,
+                "router_level": new_level,
+            },
+        )
+
+    correction_listeners = getattr(api, "_correction_listeners", None)
+    if correction_listeners is None:
+        correction_listeners = api._correction_listeners = []
+    correction_listeners.append(on_correction)
+
     last_state: dict[str, int] = {}
 
     async def poll_states(_now=None) -> None:
@@ -171,5 +195,7 @@ async def async_setup_events(hass: HomeAssistant, entry, helvar_router):
             listeners.remove(on_scene_recall)
         if on_control in control_listeners:
             control_listeners.remove(on_control)
+        if on_correction in correction_listeners:
+            correction_listeners.remove(on_correction)
 
     return stop

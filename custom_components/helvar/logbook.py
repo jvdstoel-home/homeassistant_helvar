@@ -4,7 +4,12 @@ from __future__ import annotations
 from homeassistant.core import callback
 
 from .const import DOMAIN
-from .helvar_events import EVENT_CONTROL, EVENT_DEVICE_STATE, EVENT_SCENE
+from .helvar_events import (
+    EVENT_CONTROL,
+    EVENT_CORRECTION,
+    EVENT_DEVICE_STATE,
+    EVENT_SCENE,
+)
 
 
 @callback
@@ -44,6 +49,20 @@ def async_describe_events(hass, async_describe_event):
             message += f", scène {data.get('block')}.{data['scene']}"
         return {"name": f"Helvar {name}", "message": message}
 
+    @callback
+    def describe_correction(event):
+        data = event.data
+        name = data.get("name") or data.get("address")
+        group = data.get("group_name") or f"groep {data.get('group')}"
+        level = data.get("router_level") or 0
+        state = f"aan ({level:.0f} %)" if level > 0 else "uit"
+        message = (
+            f"router meldt {state} na {data.get('reason') or 'commando'} "
+            f"in {group}; HA verwachtte {'uit' if level > 0 else 'aan'}"
+        )
+        return {"name": f"Helvar {name}", "message": message}
+
     async_describe_event(DOMAIN, EVENT_SCENE, describe_scene)
+    async_describe_event(DOMAIN, EVENT_CORRECTION, describe_correction)
     async_describe_event(DOMAIN, EVENT_CONTROL, describe_control)
     async_describe_event(DOMAIN, EVENT_DEVICE_STATE, describe_state)
