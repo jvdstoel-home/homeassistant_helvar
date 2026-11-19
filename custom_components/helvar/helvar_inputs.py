@@ -57,6 +57,10 @@ def convert(kind: str, raw: int | None):
     if kind == "wind":  # Clima Sensor D: 0-10 V = 0..40 m/s
         return round(fraction * 40, 1)
     if kind == "light":  # Clima Sensor D: 0-10 V = 0..100 klux
+        # One step is ~392 lx; at night the input flickers between 0 and 1,
+        # so the lowest step is treated as dark.
+        if raw <= 1:
+            return 0
         return round(fraction * 100000)
     if kind == "rain":  # Clima Sensor D: 0 V dry, 10 V rain
         return fraction > 0.5

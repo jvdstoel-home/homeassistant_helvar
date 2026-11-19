@@ -126,6 +126,11 @@ Changes in 0.6.0:
   and the platforms add their entities when it has finished. Until then the Helvar
   entities show as unavailable. If discovery fails, the integration reloads after 60 s.
 
+Changes in 0.6.3:
+
+- Light sensors: the lowest input step (raw 1, ~392 lx) is shown as 0 lx, so the
+  sensors read 0 at night instead of flickering between 0 and 392 lx.
+
 Changes in 0.6.2:
 
 - After a scene or command, the integration reads the real level of each lamp in
