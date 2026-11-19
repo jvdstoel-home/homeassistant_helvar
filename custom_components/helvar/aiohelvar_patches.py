@@ -207,6 +207,14 @@ async def _refresh_group_levels(router, group_id, delay, reason=None):
         old_level = float(getattr(device, "load_level", 0) or 0)
         await router.devices.update_device_load_level(address, response.result)
         if (old_level > 0) != (new_level > 0):
+            if not (reason or "").startswith("scène"):
+                # After a direct level / proportion command HA has no real expectation
+                # (e.g. a panel "on" press reports L:0), so a correction is normal.
+                _LOGGER.debug(
+                    "Level of %s (%s) updated after %s in group %s: %s -> %s",
+                    address, device.name, reason or "command", group_id, old_level, new_level,
+                )
+                continue
             # Home Assistant expected the lamp to be on/off after the scene, but the
             # router reports otherwise: log it so it can be traced afterwards.
             _LOGGER.info(

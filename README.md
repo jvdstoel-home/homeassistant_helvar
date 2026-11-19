@@ -12,6 +12,11 @@ the blinds scene mapping (scene 1.1 = down, 1.15 = up), Dutch logbook texts and 
 
 ## Changelog (newest first)
 
+### 0.6.4
+- `helvar_level_corrected` is only fired after a scene recall. After a direct level or
+  proportion command (e.g. a panel "on" button or a motion sensor timing out) Home Assistant
+  has no real expectation, so the corrected level is applied silently.
+
 ### 0.6.3
 - Light sensors: the lowest input step (raw 1, ~392 lx) is shown as 0 lx, so the sensors read
   0 at night instead of flickering between 0 and 392 lx.
