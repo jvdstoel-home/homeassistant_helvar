@@ -126,3 +126,8 @@ Changes in 0.6.0:
   and the platforms add their entities when it has finished. Until then the Helvar
   entities show as unavailable. If discovery fails, the integration reloads after 60 s.
 
+Changes in 0.6.1:
+- Screens verified on site: scene 1.1 = down, scene 1.15 = up (on a blinds group or on one
+  channel with C:12); stop = "modify proportion" in the opposite direction while moving
+  (C:17 group / C:18 channel). 0.5.0 had up and down the wrong way round.
+

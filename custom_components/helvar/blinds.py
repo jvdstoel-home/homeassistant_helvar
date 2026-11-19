@@ -1,23 +1,15 @@
 """Screens (490 Blinds Controller channels).
 
-Up/down go through scenes, like the weather sequences in the Designer project:
-every 490 channel has the standard scene table (1.1 = 100 = up, 1.15/1.16 = 0 = down).
-Proportion commands sent by the router (C:17/C:18) did not move a screen on site
-(18 Nov), while button panels use them directly on the bus; they are only kept for
-stop (opposite direction while running, as on the panels), which is still to be tested.
-Note: Helvar blocks scenes for the ground-floor screens while it rains.
-
-Panel behaviour (for tracking):
-
-Observed on site (18 Nov 2026): every panel sends "modify proportion" to the
-room's blinds group, C:17 with F:15:
-
-- down: P:0
-- up:   P:-1
-- stop: the opposite direction while the 490 still counts its run time
-
-The channel level (C:152) does not tell the position, so the state in Home
-Assistant is the last direction commanded (by HA or by a panel).
+Verified on site with the user watching (19 Nov 2026, kitchen screen):
+- down: scene 1.1 (level 100), on a blinds group (C:11) or on one channel (C:12)
+- up:   scene 1.15 (level 0), likewise; a scene always runs the screen to the end,
+        also when it is moving the other way
+- stop: while moving, "modify proportion" in the opposite direction, like the
+        button panels: C:17 on the group or C:18 on the channel, P:-1 while going
+        down, P:0 while going up
+The weather sequences in the Designer project use the same scenes (Screens Zuid/
+West/Oost: 1.1 = neer, 1.15 = op; group 11010 1.15 = alles op).
+The position cannot be read, so the state is the last commanded direction.
 """
 from __future__ import annotations
 
@@ -30,12 +22,12 @@ UP = "up"
 DOWN = "down"
 STOPPED = "stopped"
 PROPORTION = {DOWN: 0, UP: -1}
-SCENE = {UP: 1, DOWN: 15}  # block 1
+SCENE = {UP: 15, DOWN: 1}  # block 1: 1.15 = up, 1.1 = down
 FADE = 15  # 1/100 s, as the panels send it
 # The 490's run time lies between 43 s and 98 s (measured on 18 Nov: "up" 43 s after
 # "down" acted as stop, 98 s after it moved). Within RUN_TIME the opposite direction
 # is a stop; after it, it would start the screen moving, so a stop is not sent then.
-RUN_TIME = 40  # s
+RUN_TIME = 90  # s
 
 
 class BlindState:
@@ -204,7 +196,8 @@ class BlindState:
                 level = float(level)
             except (TypeError, ValueError):
                 continue  # '*' = this channel ignores the scene
-            direction = UP if level >= 100 else DOWN if level <= 0 else STOPPED
+            # In this installation level 100 (scene 1.1) = down, 0 (1.15) = up.
+            direction = DOWN if level >= 100 else UP if level <= 0 else STOPPED
             self.devices[str(address)] = (direction, now)
             changed = True
         if changed:
