@@ -32,13 +32,18 @@ NAME_OVERRIDES = {
 async def async_setup_entry(hass, entry, async_add_entities):
     """Set up Helvar screens."""
     router = hass.data[DOMAIN][entry.entry_id]
-    covers = [
-        HelvarCover(device, router)
-        for device in router.api.devices.devices.values()
-        if is_blind(device)
-    ]
-    _LOGGER.info("Adding %s helvar screens", len(covers))
-    async_add_entities(covers)
+
+    async def _add():
+        router = hass.data[DOMAIN][entry.entry_id]
+        covers = [
+            HelvarCover(device, router)
+            for device in router.api.devices.devices.values()
+            if is_blind(device)
+        ]
+        _LOGGER.info("Adding %s helvar screens", len(covers))
+        async_add_entities(covers)
+
+    router.async_when_ready(_add)
 
 
 class HelvarCover(CoverEntity):

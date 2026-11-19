@@ -19,14 +19,19 @@ async def async_setup_platform(hass, config, add_entities, discovery_info=None):
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up Helvar groups from a config entry."""
-
     router = hass.data[HELVAR_DOMAIN][config_entry.entry_id]
 
-    groups = [HelvarGroup(group, router) for group in router.api.groups.groups.values()]
+    async def _add():
 
-    _LOGGER.info("Adding %s groups", len(groups))
+        router = hass.data[HELVAR_DOMAIN][config_entry.entry_id]
 
-    async_add_entities(groups)
+        groups = [HelvarGroup(group, router) for group in router.api.groups.groups.values()]
+
+        _LOGGER.info("Adding %s groups", len(groups))
+
+        async_add_entities(groups)
+
+    router.async_when_ready(_add)
 
 
 class HelvarGroup(SelectEntity):

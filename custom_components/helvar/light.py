@@ -23,27 +23,32 @@ async def async_setup_platform(hass, config, add_entities, discovery_info=None):
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up Helvar lights from a config entry."""
-
     router = hass.data[HELVAR_DOMAIN][config_entry.entry_id]
 
-    # Add devices
-    # async_add_entities(
-    #     # Add groups
-    #     HelvarLight(group, None, router)
-    #     for group in router.api.groups.groups.values()
-    # )
+    async def _add():
 
-    from .device_kinds import is_light
+        router = hass.data[HELVAR_DOMAIN][config_entry.entry_id]
 
-    devices = [
-        HelvarLight(device, router)
-        for device in router.api.devices.devices.values()
-        if is_light(device)
-    ]
+        # Add devices
+        # async_add_entities(
+        #     # Add groups
+        #     HelvarLight(group, None, router)
+        #     for group in router.api.groups.groups.values()
+        # )
 
-    _LOGGER.info("Adding %s helvar devices", len(devices))
+        from .device_kinds import is_light
 
-    async_add_entities(devices)
+        devices = [
+            HelvarLight(device, router)
+            for device in router.api.devices.devices.values()
+            if is_light(device)
+        ]
+
+        _LOGGER.info("Adding %s helvar devices", len(devices))
+
+        async_add_entities(devices)
+
+    router.async_when_ready(_add)
 
 
 class HelvarLight(LightEntity):

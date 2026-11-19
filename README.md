@@ -120,3 +120,9 @@ Changes in 0.5.0:
 - Covers show their scene table (`scene_levels`). Test action `helvar.send_raw`.
 - Note: Helvar blocks scenes for the ground-floor screens while it rains.
 
+Changes in 0.6.0:
+- Home Assistant no longer waits for Helvar at startup. Setup only opens the connection;
+  discovery of groups, devices and scene tables (1-2 minutes) runs as a background task,
+  and the platforms add their entities when it has finished. Until then the Helvar
+  entities show as unavailable. If discovery fails, the integration reloads after 60 s.
+

@@ -39,12 +39,17 @@ def weather_device_info(entry) -> DeviceInfo:
 
 async def async_setup_entry(hass, entry, async_add_entities):
     """Set up the weather station sensors."""
-    coordinators = await async_get_coordinators(hass, entry, SENSOR_KINDS)
-    async_add_entities(
-        HelvarInputSensor(coordinator, entry, item)
-        for coordinator in coordinators
-        for item in coordinator.inputs
-    )
+    router = hass.data[DOMAIN][entry.entry_id]
+
+    async def _add():
+        coordinators = await async_get_coordinators(hass, entry, SENSOR_KINDS)
+        async_add_entities(
+            HelvarInputSensor(coordinator, entry, item)
+            for coordinator in coordinators
+            for item in coordinator.inputs
+        )
+
+    router.async_when_ready(_add)
 
 
 class HelvarInputSensor(CoordinatorEntity, SensorEntity):

@@ -10,11 +10,16 @@ from .device_kinds import is_virtual_switch
 async def async_setup_entry(hass, entry, async_add_entities):
     """Set up Helvar virtual switches."""
     router = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities(
-        HelvarSwitch(device, router)
-        for device in router.api.devices.devices.values()
-        if is_virtual_switch(device)
-    )
+
+    async def _add():
+        router = hass.data[DOMAIN][entry.entry_id]
+        async_add_entities(
+            HelvarSwitch(device, router)
+            for device in router.api.devices.devices.values()
+            if is_virtual_switch(device)
+        )
+
+    router.async_when_ready(_add)
 
 
 class HelvarSwitch(SwitchEntity):

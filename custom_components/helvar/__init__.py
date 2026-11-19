@@ -130,20 +130,30 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
 
     router = HelvarRouter(hass, entry)
-
     hass.data[DOMAIN][entry.entry_id] = router
 
-    if not await router.async_setup():
+    # Only the connection is made here, so Home Assistant does not wait for Helvar.
+    # Discovery (groups, devices, scene tables: 1-2 minutes) runs in the background;
+    # the platforms add their entities when it is done.
+    try:
+        await router.async_connect()
+    except Exception:
         hass.data[DOMAIN].pop(entry.entry_id, None)
-        return False
+        raise
 
-    # PATCH: forward platforms here and await them (required by current HA).
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    # Scene recalls and device faults as events for the logbook.
-    from .helvar_events import async_setup_events
+    async def _start_events():
+        # Scene recalls and device faults as events for the logbook.
+        from .helvar_events import async_setup_events
 
-    entry.async_on_unload(await async_setup_events(hass, entry, router))
+        entry.async_on_unload(await async_setup_events(hass, entry, router))
+
+    router.async_when_ready(_start_events)
+
+    entry.async_create_background_task(
+        hass, router.async_initialize(), f"helvar_discovery_{entry.entry_id}"
+    )
 
     return True
 

@@ -7,18 +7,24 @@ from homeassistant.components.binary_sensor import (
 )
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from .const import DOMAIN
 from .helvar_inputs import AnalogueInput, async_get_coordinators, convert
 from .sensor import weather_device_info
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
     """Set up the rain sensor."""
-    coordinators = await async_get_coordinators(hass, entry, {"rain"})
-    async_add_entities(
-        HelvarRainSensor(coordinator, entry, item)
-        for coordinator in coordinators
-        for item in coordinator.inputs
-    )
+    router = hass.data[DOMAIN][entry.entry_id]
+
+    async def _add():
+        coordinators = await async_get_coordinators(hass, entry, {"rain"})
+        async_add_entities(
+            HelvarRainSensor(coordinator, entry, item)
+            for coordinator in coordinators
+            for item in coordinator.inputs
+        )
+
+    router.async_when_ready(_add)
 
 
 class HelvarRainSensor(CoordinatorEntity, BinarySensorEntity):
